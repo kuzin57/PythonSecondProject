@@ -9,7 +9,6 @@ class Forecast:
     def __init__(self):
         self.city = ""
         self.days = 0
-        pass
 
     def set_city(self, city):
         self.city = city
@@ -26,127 +25,165 @@ class Forecast:
         counter = 0
         ans = ''
         flag = False
-        for i in data['list']:
-            prev_date = cur_date
-            cur_date = i['dt_txt'].split()[0]
-            flag = False
-            if cur_date != prev_date:
-                flag = True
-                counter += 1
-            if(counter > self.days):
-                break
-            if cur_date != prev_date:
-                ans += cur_date
+        if 'list' in data:
+            for i in data['list']:
+                prev_date = cur_date
+                cur_date = i['dt_txt'].split()[0]
+                flag = False
+                if cur_date != prev_date:
+                    flag = True
+                    counter += 1
+                if(counter > self.days):
+                    break
+                if cur_date != prev_date:
+                    ans += cur_date
+                    ans += ' '
+                if not flag:
+                    ans += '                     '
+                ans += i['dt_txt'].split()[1]
                 ans += ' '
-            if not flag:
-                ans += '                     '
-            ans += i['dt_txt'].split()[1]
-            ans += ' '
-            ans += '{0:+3.0f}'.format(i['main']['temp'])
-            ans += ' '
-            ans += i['weather'][0]['description']
-            ans += '\n'
+                ans += '{0:+3.0f}'.format(i['main']['temp'])
+                ans += ' '
+                if i['weather'][0]['description'] == 'clear sky':
+                    ans += '☀️'
+                elif i['weather'][0]['description'] == 'few clouds':
+                    ans += '🌤'
+                elif i['weather'][0]['description'] == 'light rain':
+                    ans += '🌦'
+                elif i['weather'][0]['description'] == 'scattered clouds':
+                    ans += '⛅️'
+                elif i['weather'][0]['description'] == 'broken clouds':
+                    ans += '⛅️'
+                elif i['weather'][0]['description'] == 'overcast clouds':
+                    ans += '☁️'
+                elif i['weather'][0]['description'] == 'light snow':
+                    ans += '🌨'
+                elif i['weather'][0]['description'] == 'snow':
+                    ans += '🌨'
+                elif i['weather'][0]['description'] == 'moderate rain':
+                    ans += '🌧'
+                elif i['weather'][0]['description'] == 'rain':
+                    ans += '🌧'
+                else:
+                    ans += i['weather'][0]['description']
+                ans += '\n'
+        else:
+            ans = 'Wrong city, bad request! \n'
         return ans
 
 
+class User:
+    def __init__(self):
+        self.id = 0
+        self.city = "Moscow"
+        self.time = "09:00"
+        self.forecast_sent = False
+        self.waiting_for_city = False
+        self.waiting_for_days = False
+        self.waiting_for_time = False
+        self.waiting_for_city_for_every_day_mailing = False
+    
+    def set_time(self, t):
+        self.time = t
+    
+    def set_city(self, city):
+        self.city = city
+
+    def set_id(self, new_id):
+        self.id = new_id
+
+    def change_forecast_sent(self, is_sent):
+        self.forecast_sent = is_sent
+
+
 bot = telebot.TeleBot('5309926111:AAFL8ZQOaWn9txjSg7AoGINXAUptB7fK5l8')
-users_id = set()
-waiting_for_city = False
-waiting_for_days = False
-waiting_for_time = False
-waiting_for_city_for_every_day_mailing = False
-send_forecast = False
-forecast_sent = False
-time_of_every_day_mailing = "09:00"
-city_of_every_day_mailing = "Moscow"
-forecaster = Forecast()
+users = dict()
 
-# @bot.message_handler(commands=['start'])
-# def start_messaging(message):
-#     bot.send_message(message.from_user.id, 'Type \'Hi\' to start messaging with me')
+@bot.message_handler(commands=['start'])
+def start_messaging(message):
+    global users
+    bot.send_message(message.from_user.id, 'Hi!')
+    new_user = User()
+    new_user.set_id(message.from_user.id)
+    users[message.from_user.id] = new_user
 
-# @bot.message_handler(commands=['Set time'])
-# def set_time(message):
-#     bot.send_message(message.from_user.id, 'Enter time')
+@bot.message_handler(commands=['help'])
+def help(message):
+    bot.send_message(message.from_user.id, 'This bot is for getting forecasts, \n you can see the list of commands in menu. \n Send \' /start \' before giving commands')
 
-# @bot.message_handler(commands=['Set city'])
-# def set_city(message):
-#     bot.send_message(message.from_user.id, 'Enter city')
+@bot.message_handler(commands=['get'])
+def get(message):
+    global users
+    bot.send_message(message.from_user.id, "Enter the city")
+    if message.from_user.id in users:
+        users[message.from_user.id].waiting_for_city = True
+
+@bot.message_handler(commands=['set_time'])
+def set_time_of_every_day_mailing(message):
+    global users
+    if message.from_user.id in users:
+        bot.send_message(message.from_user.id, 'Choose the suitable time when I can send you daily forecast \n Format: hh:mm')
+        users[message.from_user.id].waiting_for_time = True
+        users[message.from_user.id].forecast_sent = False
+
+@bot.message_handler(commands=['set_city'])
+def set_city_of_every_day_mailing(message):
+    global users
+    if message.from_user.id in users:
+        bot.send_message(message.from_user.id, 'Choose the city which weather you are interested in every day')
+        users[message.from_user.id].waiting_for_city_for_every_day_mailing = True
+
+@bot.message_handler(commands=['thank_you'])
+def thank_from_user(message):
+    bot.send_message(message.from_user.id, 'You are welcome 😍')
+
 
 @bot.message_handler(content_types=['text'])
-def get_text_message(message):
-    global waiting_for_city
-    global waiting_for_days
-    global send_forecast
-    global forecaster
-    global waiting_for_time
-    global time_of_every_day_mailing
-    global city_of_every_day_mailing
-    global waiting_for_city_for_every_day_mailing
-    if message.text == "Hi":
-        if message.from_user.id not in users_id:
-            users_id.add(message.from_user.id)
-        print(users_id)
-        bot.send_message(message.from_user.id, "Hi, how can I help you?")
-        bot.send_message(message.from_user.id, "Send \'Help\' message to know how to get the forecast")
-    elif message.text == "Get weather":
-        bot.send_message(message.from_user.id, "One second")
-        bot.send_message(message.from_user.id, "Enter the city")
-        waiting_for_city = True
-    elif waiting_for_city:
-        forecaster.set_city(message.text)
-        waiting_for_city = False
-        bot.send_message(message.from_user.id, "Days(0-5)")
-        waiting_for_days = True
-    elif waiting_for_days:
-        waiting_for_days = False
-        forecaster.set_days(int(message.text))
-        bot.send_message(message.from_user.id, "Ok")
-        send_forecast = True
-    elif message.text == "Help":
-        bot.send_message(message.from_user.id, "To get forecast -- Get weather\n To thank bot -- Thank you\n To set time of every day forecast mailing -- Set time \n To set city of every day forecast mailing -- Set city")
-    elif message.text == 'Thank you':
-        bot.send_message(message.from_user.id, 'You are welcome!')
-    elif message.text == 'Set time':
-        waiting_for_time = True
-        bot.send_message(message.from_user.id, "Enter time")
-    elif waiting_for_time:
-        waiting_for_time = False
-        time_of_every_day_mailing = str(message.text)
-    elif message.text == 'Set city':
-        waiting_for_city_for_every_day_mailing = True
-        bot.send_message(message.from_user.id, 'Enter city')
-    elif waiting_for_city_for_every_day_mailing:
-        waiting_for_city_for_every_day_mailing = False
-        city_of_every_day_mailing = str(message.text)
-    else:
-        bot.send_message(message.from_user.id, 'Sorry, I do not understand you')
-    if send_forecast:
-        forecast = forecaster.get_forecast()
-        bot.send_message(message.from_user.id, forecast)
-        send_forecast = False
+def get_info_from_user(message):
+    global users
+    if message.from_user.id in users:
+        if users[message.from_user.id].waiting_for_city:
+            users[message.from_user.id].waiting_for_city = False
+            users[message.from_user.id].set_city(message.text)
+            bot.send_message(message.from_user.id, 'Days (1-5)')
+            users[message.from_user.id].waiting_for_days = True
+        elif users[message.from_user.id].waiting_for_days:
+            users[message.from_user.id].waiting_for_days = False
+            forecaster = Forecast()
+            forecaster.set_days(int(message.text))
+            forecaster.set_city(users[message.from_user.id].city)
+            forecast = forecaster.get_forecast()
+            bot.send_message(message.from_user.id, forecast)
+        elif users[message.from_user.id].waiting_for_time:
+            users[message.from_user.id].waiting_for_time = False
+            users[message.from_user.id].set_time(message.text)
+        elif users[message.from_user.id].waiting_for_city_for_every_day_mailing:
+            users[message.from_user.id].waiting_for_city_for_every_day_mailing = False
+            users[message.from_user.id].set_city(message.text)
 
 
-def send_every_day_forecast():
+def send_every_day_forecast(user_id):
+    global users
+    forecaster = Forecast()
     forecaster.set_days(1)
-    forecaster.set_city(city_of_every_day_mailing)
+    forecaster.set_city(users[user_id].city)
     forecast = forecaster.get_forecast()
-    for id in users_id:
-        bot.send_message(id, forecast)
+    bot.send_message(user_id, forecast)
     return True
 
 
 def every_day_forecasts_managing():
-    global forecast_sent
+    global users
     while True:
-        cur_time = str(datetime.datetime.now())
-        if(cur_time[:5] == time_of_every_day_mailing and not forecast_sent and len(users_id) > 0):
-            forecast_sent = True
-            send_every_day_forecast()
-        if(cur_time[:5] == '00:00'):
-            forecast_sent = False
+        for i in users:
+            cur_time = str(datetime.datetime.now().time())
+            if cur_time[:5] == users[i].time and not users[i].forecast_sent:
+                users[i].change_forecast_sent(True)
+                send_every_day_forecast(users[i].id)
+            if(cur_time[:5] == '00:00'):
+                users[i].forecast_sent = False
         time.sleep(1)
 
 
-Thread(target=every_day_forecasts_managing, args=()).start() 
+Thread(target=every_day_forecasts_managing).start() 
 bot.polling(none_stop=True, interval=0)
