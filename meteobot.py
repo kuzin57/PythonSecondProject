@@ -25,51 +25,54 @@ class Forecast:
         counter = 0
         ans = ''
         flag = False
-        if 'list' in data:
-            for i in data['list']:
-                prev_date = cur_date
-                cur_date = i['dt_txt'].split()[0]
-                flag = False
-                if cur_date != prev_date:
-                    flag = True
-                    counter += 1
-                if(counter > self.days):
-                    break
-                if cur_date != prev_date:
-                    ans += cur_date
-                    ans += ' '
-                if not flag:
-                    ans += '                     '
-                ans += i['dt_txt'].split()[1]
+        if 'list' not in data:
+            return 'Unknown city'
+        for i in data['list']:
+            prev_date = cur_date
+            cur_date = i['dt_txt'].split()[0]
+            flag = False
+            if cur_date != prev_date:
+                flag = True
+                counter += 1
+            if(counter > self.days):
+                break
+            if cur_date != prev_date:
+                ans += cur_date
                 ans += ' '
-                ans += '{0:+3.0f}'.format(i['main']['temp'])
-                ans += ' '
-                if i['weather'][0]['description'] == 'clear sky':
-                    ans += '☀️'
-                elif i['weather'][0]['description'] == 'few clouds':
-                    ans += '🌤'
-                elif i['weather'][0]['description'] == 'light rain':
-                    ans += '🌦'
-                elif i['weather'][0]['description'] == 'scattered clouds':
-                    ans += '⛅️'
-                elif i['weather'][0]['description'] == 'broken clouds':
-                    ans += '⛅️'
-                elif i['weather'][0]['description'] == 'overcast clouds':
-                    ans += '☁️'
-                elif i['weather'][0]['description'] == 'light snow':
-                    ans += '🌨'
-                elif i['weather'][0]['description'] == 'snow':
-                    ans += '🌨'
-                elif i['weather'][0]['description'] == 'moderate rain':
-                    ans += '🌧'
-                elif i['weather'][0]['description'] == 'rain':
-                    ans += '🌧'
-                else:
-                    ans += i['weather'][0]['description']
-                ans += '\n'
-        else:
-            ans = 'Wrong city, bad request! \n'
+            if not flag:
+                ans += '                     '
+            ans += i['dt_txt'].split()[1]
+            ans += ' '
+            ans += '{0:+3.0f}'.format(i['main']['temp'])
+            ans += ' '
+            if i['weather'][0]['description'] == 'clear sky':
+                ans += '☀️'
+            elif i['weather'][0]['description'] == 'few clouds':
+                ans += '🌤'
+            elif i['weather'][0]['description'] == 'light rain':
+                ans += '🌦'
+            elif i['weather'][0]['description'] == 'scattered clouds':
+                ans += '⛅️'
+            elif i['weather'][0]['description'] == 'broken clouds':
+                ans += '⛅️'
+            elif i['weather'][0]['description'] == 'overcast clouds':
+                ans += '☁️'
+            elif i['weather'][0]['description'] == 'light snow':
+                ans += '🌨'
+            elif i['weather'][0]['description'] == 'snow':
+                ans += '🌨'
+            elif i['weather'][0]['description'] == 'moderate rain':
+                ans += '🌧'
+            elif i['weather'][0]['description'] == 'rain':
+                ans += '🌧'
+            else:
+                ans += i['weather'][0]['description']
+            # ans += i['weather'][0]['description']
+            ans += '\n'
         return ans
+
+    def func_for_testing(self, a, b):
+        return a + b
 
 
 class User:
@@ -82,10 +85,10 @@ class User:
         self.waiting_for_days = False
         self.waiting_for_time = False
         self.waiting_for_city_for_every_day_mailing = False
-    
+
     def set_time(self, t):
         self.time = t
-    
+
     def set_city(self, city):
         self.city = city
 
@@ -94,6 +97,9 @@ class User:
 
     def change_forecast_sent(self, is_sent):
         self.forecast_sent = is_sent
+
+    def return_hello(self):
+        return 'hello'
 
 
 bot = telebot.TeleBot('5309926111:AAFL8ZQOaWn9txjSg7AoGINXAUptB7fK5l8')
@@ -185,5 +191,5 @@ def every_day_forecasts_managing():
         time.sleep(1)
 
 
-Thread(target=every_day_forecasts_managing).start() 
+Thread(target=every_day_forecasts_managing).start()
 bot.polling(none_stop=True, interval=0)
